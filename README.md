@@ -6,7 +6,7 @@ This tool allows a Mininet network to be built from host details contained withi
 
 Simulating realistic traffic in an SDN testbed can be difficult. This tool allows you to take a packet capture from any network and use this as the traffic within your SDN testbed. 
 
-This is perfect for evaluating SDN applications against complex network scenarios invovling multiple hosts and protocols.
+This is perfect for evaluating SDN applications against complex network scenarios involving multiple hosts and protocols.
 
 Example use cases:
 - Testing a statistics collection or load balancing application.
@@ -58,7 +58,7 @@ Other limitations:
 
 Planned tasks:
 - Add signal handler for proper clean-up if user uses ctrl+c to stop pcap replay.
-- Add config file to allow host-to-switch mappings, controllers, etc to be specificed.
+- Add config file to allow topology, controllers, etc to be specificed.
 - Add check to ensure gateway host receives correct IP address.
 - Option to loop pcap replay until stopped.
 - More testing with various pcaps.
