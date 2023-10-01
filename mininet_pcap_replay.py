@@ -16,11 +16,12 @@ import argparse
 conf.verb = 0
 
 def handle_args():
-  parser = argparse.ArgumentParser(prog="Mininet PCAP Replay", description="Replay a pcap file with a Mininet network.", epilog="Author: Dylan Smyth (https://github.com/smythtech)")
+  parser = argparse.ArgumentParser(prog="mininet_pcap_replay.py", description="Replay a pcap file with a Mininet network.", epilog="Author: Dylan Smyth (https://github.com/smythtech)")
   parser.add_argument("-r", "--pcap", help="PCAP file to read.", required=True)
   parser.add_argument("-c", "--controller-ip", help="IP address of network controller to use.", required=True)
   parser.add_argument("-p", "--controller-port", help="Port number of network controller to use.", default=6653, type=int, required=False)
   parser.add_argument("-b", "--build-only", help="Drop to Mininet CLI after network is built (No pcap replay).", required=False, action='store_true')
+  parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 
   return parser.parse_args()
 
