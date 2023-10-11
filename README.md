@@ -57,7 +57,7 @@ Other limitations:
 ## Todo
 
 Planned tasks:
-- Add signal handler for proper clean-up if user uses ctrl+c to stop pcap replay.
+- ~Add signal handler for proper clean-up if user uses ctrl+c to stop pcap replay.~ Done
 - Add config file to allow topology, controllers, etc to be specificed.
 - Add check to ensure gateway host receives correct IP address.
 - Option to loop pcap replay until stopped.
