@@ -28,7 +28,7 @@ def handle_args():
   parser.add_argument("-p", "--controller-port", help="Port number of network controller to use.", default=6653, type=int, required=False)
   parser.add_argument("-b", "--build-only", help="Drop to Mininet CLI after network is built (No pcap replay).", required=False, action='store_true')
   parser.add_argument("-v", "--verbose", help="Show additional output.", required=False, action='store_true')
-  parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+  parser.add_argument('--version', action='version', version='%(prog)s 1.1')
 
   return parser.parse_args()
 
