@@ -33,11 +33,11 @@ An SDN controller will be required when using this tool. This was tested with ON
 
 ## Usage
 
-	usage: Mininet PCAP Replay [-h] -r PCAP -c CONTROLLER_IP [-p CONTROLLER_PORT] [-b]
+	usage: mininet_pcap_replay.py [-h] -r PCAP -c CONTROLLER_IP [-p CONTROLLER_PORT] [-b] [-v] [--version]
 
 	Replay a pcap file with a Mininet network.
 
-	options:
+	optional arguments:
 	  -h, --help            show this help message and exit
 	  -r PCAP, --pcap PCAP  PCAP file to read.
 	  -c CONTROLLER_IP, --controller-ip CONTROLLER_IP
@@ -45,6 +45,8 @@ An SDN controller will be required when using this tool. This was tested with ON
 	  -p CONTROLLER_PORT, --controller-port CONTROLLER_PORT
 	                        Port number of network controller to use.
 	  -b, --build-only      Drop to Mininet CLI after network is built (No pcap replay).
+	  -v, --verbose         Show additional output.
+	  --version             show program's version number and exit
 
 ## Limitations
 This tool will rebuild the network in terms of addressing only. No services are launched on the Mininet hosts. The pcap replay is essentially a simulation of that network traffic. Attempts to actively interact with the traffic will not influence the traffic. For example, dropping TCP segments through a flow rule will not stop the host from sending future segments related to that TCP connection. 
