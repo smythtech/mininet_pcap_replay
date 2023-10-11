@@ -10,10 +10,16 @@ from mininet.clean import cleanup
 from time import sleep
 import os
 import base64
+# Stop warnings from scapy.
+from warnings import filterwarnings
+filterwarnings("ignore")
 from scapy.all import *
 import argparse
 
+# Prevent verbose output from scapy.
 conf.verb = 0
+
+verbose = 0
 
 def handle_args():
   parser = argparse.ArgumentParser(prog="mininet_pcap_replay.py", description="Replay a pcap file with a Mininet network.", epilog="Author: Dylan Smyth (https://github.com/smythtech)")
@@ -21,6 +27,7 @@ def handle_args():
   parser.add_argument("-c", "--controller-ip", help="IP address of network controller to use.", required=True)
   parser.add_argument("-p", "--controller-port", help="Port number of network controller to use.", default=6653, type=int, required=False)
   parser.add_argument("-b", "--build-only", help="Drop to Mininet CLI after network is built (No pcap replay).", required=False, action='store_true')
+  parser.add_argument("-v", "--verbose", help="Show additional output.", required=False, action='store_true')
   parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 
   return parser.parse_args()
@@ -35,8 +42,8 @@ def load_pcap_data(pcap):
     if(pkt.src not in host_data):
       ip = ""
       if(IP in pkt):
-          ip = pkt[IP].src
-      if(len(ip) > 0 and ip.split(".")[0]  not in ip_ignore_list):
+        ip = pkt[IP].src
+      if(len(ip) >= 0 and ip.split(".")[0]  not in ip_ignore_list):
         host_count+=1
         host_name = "h" + str(host_count)
         host_data[pkt.src] = [host_name, ip, host_name + "-eth0"]
@@ -126,15 +133,29 @@ def build_mn(host_data, switch_data, link_data, controller_data, pkt_data):
   return net, hosts
 
 def do_pcap_replay(pkt_data):
+  global verbose
   for pkt_d in pkt_data:
-    sleep(float(pkt_d[1]))
+    if(pkt_d[1] > 0):
+      if(verbose):
+        print("[*] Waiting " + str(float(pkt_d[1])) + " seconds before sending next packet")
+      sleep(float(pkt_d[1]))
+    if(verbose):
+      try:
+        print("[*] Sending: " + Ether(base64.b64decode(pkt_d[2])).summary())
+      except:
+        print("[*] Seding unknown packet")
     # Better way to do this? May add slight delay in sending but will do for now.
     pkt_d[0].cmd("python3 -c \"import base64; from scapy.sendrecv import sendp; sendp(base64.b64decode(" +  str(pkt_d[2]) + "), iface='" + pkt_d[0].intfNames()[0] + "')\"")
 
 def main():
+  global verbose
   args = handle_args()
 
   #TODO: Add config file loading here.
+
+  if(args.verbose):
+    verbose = 1
+    print("[*] Verbose output enabled")
 
   try:
     print("[+] Reading pcap...")
