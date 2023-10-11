@@ -10,6 +10,7 @@ from mininet.clean import cleanup
 from time import sleep
 import os
 import base64
+import signal
 # Stop warnings from scapy.
 from warnings import filterwarnings
 filterwarnings("ignore")
@@ -39,6 +40,10 @@ def load_pcap_data(pcap):
   host_count = 0
   previous_timestamp = 0
   for pkt in pcap:
+    if((hasattr(pkt, "src") == False) and (hasattr(pkt, "dst") == False)):
+      print("[!] Error: The content of this pcap is not supported by this tool.")
+      print("[!] The layer 2 source and destination addresses should be available for each packet.")
+      exit()
     if(pkt.src not in host_data):
       ip = ""
       if(IP in pkt):
@@ -147,6 +152,16 @@ def do_pcap_replay(pkt_data):
     # Better way to do this? May add slight delay in sending but will do for now.
     pkt_d[0].cmd("python3 -c \"import base64; from scapy.sendrecv import sendp; sendp(base64.b64decode(" +  str(pkt_d[2]) + "), iface='" + pkt_d[0].intfNames()[0] + "')\"")
 
+def set_handler(net):
+  def sig_handler(sig, frame):
+    print("[+] Got ctrl+c")
+    print("[+] Stopping network and cleaning up...", end="")
+    net.stop()
+    cleanup()
+    print("done")
+    exit()
+  return sig_handler
+
 def main():
   global verbose
   args = handle_args()
@@ -172,8 +187,12 @@ def main():
   controller_data = {}
   controller_data["c0"] = (args.controller_ip, args.controller_port) # Temp until we swap to using a config file
 
-  print("[+] Building Mininet network...")
+  print("[+] Building Mininet network")
   net, hosts = build_mn(host_data, switch_data, link_data, controller_data, pkt_data)
+
+  if(verbose):
+    print("[*] Setting signal handler")
+  signal.signal(signal.SIGINT, set_handler(net))
 
   if(args.build_only):
     print("[+] Dropping to Mininet CLI.")
