@@ -51,10 +51,11 @@ An SDN controller will be required when using this tool. This was tested with ON
 	  -v, --verbose         Show additional output.
 	  --version             show program's version number and exit
 
-## The Configuration File
+## Topology Configuration
 This tool can take a configuration file that defines connections within the generated network. Host-to-switch links and switch-to-switch links can be defined in this file.
 
 The following is an example config:
+```json
 	{
   		"hosts": {
 			"11:22:33:44:55:66": "h1",
@@ -74,6 +75,7 @@ The following is an example config:
 		"h2-s4"
 	  ]
 	}
+```
 
 The above configuration will create a linear topology with a host connected at either end. In this configuration hosts 11:22:33:44:55:66 and 77:88:99:00:aa:bb exist within the pcap file being replayed. This configuration file allows you to place certain hosts at particular locations in the network. By default, all hosts will be added to switch s1 unless otherwise specificied.
 
@@ -90,7 +92,7 @@ Other limitations:
 
 Planned tasks:
 - ~Add signal handler for proper clean-up if user uses ctrl+c to stop pcap replay.~ Done
-- Add config file to allow topology, controllers, etc to be specificed.
+- ~Add config file to allow topology, controllers, etc to be specificed.~ Done.
 - Add check to ensure gateway host receives correct IP address.
 - Option to loop pcap replay until stopped.
 - More testing with various pcaps.
