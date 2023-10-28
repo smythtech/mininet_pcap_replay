@@ -33,7 +33,7 @@ An SDN controller will be required when using this tool. This was tested with ON
 
 ## Usage
 
-	usage: mininet_pcap_replay.py [-h] -r PCAP -c CONTROLLER_IP [-p CONTROLLER_PORT] [-b] [-v] [--version]
+	usage: mininet_pcap_replay.py [-h] -r PCAP -c CONTROLLER_IP [-p CONTROLLER_PORT] [-l LOAD_CONFIG] [-b] [-g] [-v] [--version]
 
 	Replay a pcap file with a Mininet network.
 
@@ -44,15 +44,45 @@ An SDN controller will be required when using this tool. This was tested with ON
 	                        IP address of network controller to use.
 	  -p CONTROLLER_PORT, --controller-port CONTROLLER_PORT
 	                        Port number of network controller to use.
+	  -l LOAD_CONFIG, --load-config LOAD_CONFIG
+	                        Topology configuration file to load
 	  -b, --build-only      Drop to Mininet CLI after network is built (No pcap replay).
+	  -g, --generate-conf   Generate a configuration after network build. Will be printed after exiting Mininet CLI if using build-only mode.
 	  -v, --verbose         Show additional output.
 	  --version             show program's version number and exit
+
+## The Configuration File
+This tool can take a configuration file that defines connections within the generated network. Host-to-switch links and switch-to-switch links can be defined in this file.
+
+The following is an example config:
+	{
+  		"hosts": {
+			"11:22:33:44:55:66": "h1",
+			"77:88:99:00:aa:bb": "h2"
+	  	},
+  	"switches": [
+		"s1",
+		"s2",
+		"s3",
+		"s4"
+	  ],
+	  "links": [
+		"h1-s1",
+		"s1-s2",
+		"s2-s3",
+		"s3-s4",
+		"h2-s4"
+	  ]
+	}
+
+The above configuration will create a linear topology with a host connected at either end. In this configuration hosts 11:22:33:44:55:66 and 77:88:99:00:aa:bb exist within the pcap file being replayed. This configuration file allows you to place certain hosts at particular locations in the network. By default, all hosts will be added to switch s1 unless otherwise specificied.
+
+Links should be defined with the name of the host node first i.e. host-switch 
 
 ## Limitations
 This tool will rebuild the network in terms of addressing only. No services are launched on the Mininet hosts. The pcap replay is essentially a simulation of that network traffic. Attempts to actively interact with the traffic will not influence the traffic. For example, dropping TCP segments through a flow rule will not stop the host from sending future segments related to that TCP connection. 
 
 Other limitations:
-- Currently the tool will connect all hosts through a single switch.
 - Gateway address is not set on hosts. May impact "build only" mode.
 - Hosts cannot be interacted with during the pcap replay.
 

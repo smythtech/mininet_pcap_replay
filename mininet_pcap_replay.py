@@ -11,6 +11,7 @@ from time import sleep
 import os
 import base64
 import signal
+import json
 # Stop warnings from scapy.
 from warnings import filterwarnings
 filterwarnings("ignore")
@@ -27,20 +28,26 @@ def handle_args():
   parser.add_argument("-r", "--pcap", help="PCAP file to read.", required=True)
   parser.add_argument("-c", "--controller-ip", help="IP address of network controller to use.", required=True)
   parser.add_argument("-p", "--controller-port", help="Port number of network controller to use.", default=6653, type=int, required=False)
+  parser.add_argument("-l", "--load-config", help="Topology configuration file to load", required=False)
   parser.add_argument("-b", "--build-only", help="Drop to Mininet CLI after network is built (No pcap replay).", required=False, action='store_true')
+  parser.add_argument("-g", "--generate-conf", help="Generate a configuration after network build. Will be printed after exiting Mininet CLI if using build-only mode.", required=False, action='store_true')
   parser.add_argument("-v", "--verbose", help="Show additional output.", required=False, action='store_true')
-  parser.add_argument('--version', action='version', version='%(prog)s 1.2')
+  parser.add_argument('--version', action='version', version='%(prog)s 1.3')
 
   return parser.parse_args()
 
-def load_pcap_data(pcap):
+def load_pcap_data(pcap, topo_config):
+  if(len(topo_config) > 0):
+    configured_hosts = topo_config["hosts"]
+    host_count = len(configured_hosts)
+  else:
+    host_count = 0
   host_data = {}
   pkt_data = []
   ip_ignore_list = ["255", "240", "239", "224"] # Quick ignore list for IPs that we don't care about (e.g. multicast addresses)
-  host_count = 0
   previous_timestamp = 0
   for pkt in pcap:
-    if((hasattr(pkt, "src") == False) and (hasattr(pkt, "dst") == False)):
+    if((hasattr(pkt, "src") == False) or (hasattr(pkt, "dst") == False)):
       print("[!] Error: The content of this pcap is not supported by this tool.")
       print("[!] The layer 2 source and destination addresses should be available for each packet.")
       exit()
@@ -48,18 +55,26 @@ def load_pcap_data(pcap):
       ip = ""
       if(IP in pkt):
         ip = pkt[IP].src
-      if(len(ip) >= 0 and ip.split(".")[0]  not in ip_ignore_list):
-        host_count+=1
-        host_name = "h" + str(host_count)
+      if((len(ip) >= 0) and (ip.split(".")[0] not in ip_ignore_list)):
+        if((len(topo_config) > 0) and (pkt.src in configured_hosts)):
+          host_name = configured_hosts[pkt.src]
+          print("Host name from file (src)" + str(host_name))
+        else:
+          host_count+=1
+          host_name = "h" + str(host_count)
         host_data[pkt.src] = [host_name, ip, host_name + "-eth0"]
 
     if((pkt.dst not in host_data) and (pkt.dst.lower() != "ff:ff:ff:ff:ff:ff")):
       ip = ""
       if(IP in pkt):
           ip = pkt[IP].dst
-      if(len(ip) > 0 and ip.split(".")[0] not in ip_ignore_list):
-        host_count+=1
-        host_name = "h" + str(host_count)
+      if((len(ip) > 0) and (ip.split(".")[0] not in ip_ignore_list)):
+        if((len(topo_config) > 0) and (pkt.dst in configured_hosts)):
+          host_name = configured_hosts[pkt.dst]
+          print("Host name from file (dst)" + str(host_name))
+        else:
+          host_count+=1
+          host_name = "h" + str(host_count)
         host_data[pkt.dst] = [host_name, ip, host_name + "-eth0"]
 
     delay = pkt.time - previous_timestamp
@@ -77,7 +92,7 @@ def build_mn(host_data, switch_data, link_data, controller_data, pkt_data):
   host_adds = []
   host_link_map = {}
 
-  print("\tAdding switches")
+  print("\tAdding switches (OpenFlow 1.3)")
   for switch_name in switch_data:
     switches.append(net.addSwitch(switch_name, protocols="OpenFlow13"))
 
@@ -92,10 +107,33 @@ def build_mn(host_data, switch_data, link_data, controller_data, pkt_data):
     h = host_data[host_mac]
     h.append(host_mac)
     host = net.addHost(h[0])
-    l = net.addLink(host, switches[0])
     hosts.append(host)
     host_adds.append(h)
-    host_link_map[h[0]] = l.intf2.name
+
+  print("\tAdding links")
+  try:
+    linked = []
+    # Add configured links
+    for link in link_data:
+      link_ends = link.split("-")
+      l = net.addLink(link_ends[0], link_ends[1])
+      if((link_ends[0] not in switch_data) and (link_ends[1] not in switch_data)):
+        host_link_map[link_ends[0]] = l.intf2.name
+      linked.append(link_ends[0])
+
+    print(linked)
+
+    # Add non-configured links. All hosts to first switch
+    for host in hosts:
+      if(host.name not in linked):
+        print("Linking " + str(host.name))
+        l = net.addLink(host.name, switches[0])
+        host_link_map[host.name] = l.intf2.name
+        linked.append(host.name)
+  except KeyError as e:
+    print("[!] Error adding links. Check config.")
+    print(e)
+    exit(1)
 
   print("\tConfiguring packet output ports...", end="")
   for h in hosts:
@@ -137,6 +175,21 @@ def build_mn(host_data, switch_data, link_data, controller_data, pkt_data):
 
   return net, hosts
 
+def generate_topo_conf(net):
+  topo_conf = {"hosts": {}, "switches": [], "links": []}
+
+  for h in net.hosts:
+    topo_conf["hosts"][h.MAC(intf=h.intfs[0])] = h.name
+
+  for s in net.switches:
+    topo_conf["switches"].append(s.name)
+
+  for l in net.links:
+    link = l.intf1.node.name + "-" + l.intf2.node.name
+    topo_conf["links"].append(link)
+
+  print(json.dumps(topo_conf, indent=2))
+
 def do_pcap_replay(pkt_data):
   global verbose
   for pkt_d in pkt_data:
@@ -166,26 +219,49 @@ def main():
   global verbose
   args = handle_args()
 
-  #TODO: Add config file loading here.
-
   if(args.verbose):
     verbose = 1
     print("[*] Verbose output enabled")
 
+  topo_config = {}
+  try:
+    if(args.load_config):
+      print(f"[+] Loading configuration file {args.load_config}")
+      with open(args.load_config) as f:
+        topo_config = json.loads(f.read())
+      if(verbose):
+        print("[*] Configuration file content loaded:")
+        print(json.dumps(topo_config, indent=2))
+  except Exception as e:
+    print(f"[!] Error reading configuration file {args.load_config}")
+    print(str(e))
+    exit(1)
+
   try:
     print("[+] Reading pcap...")
     pcap = rdpcap(args.pcap)
-  except:
-    print("[!] Error: Could not open/read pcap file " + args.pcap)
+  except Exception as e:
+    print(f"[!] Error: Could not open/read pcap file {args.pcap}")
+    print(str(e))
+    exit(1)
 
-  host_data, pkt_data = load_pcap_data(pcap)
-  print("[+] Loaded data for " + str(len(host_data)) + " hosts.")
-
-  #TODO: Parse config here
   switch_data = ["s1"]
   link_data = []
+  if(len(topo_config) > 0):
+    print("[+] Topology configuration detected")
+    print("[+] Host data will be loaded during pcap parsing")
+    print("[+] Loading switch and link data")
+    switch_data = topo_config["switches"]
+    if(len(switch_data) == 0):
+      print("\tNo switches detected in config")
+    link_data = topo_config["links"]
+    if(len(link_data) == 0):
+      print("\tNo links detected in config")
+  host_data, pkt_data = load_pcap_data(pcap, topo_config)
+  print("[+] Loaded data for " + str(len(host_data)) + " hosts.")
+  # Leaving the controller config out of the config file for now. 
   controller_data = {}
-  controller_data["c0"] = (args.controller_ip, args.controller_port) # Temp until we swap to using a config file
+  controller_data["c0"] = (args.controller_ip, args.controller_port)
 
   print("[+] Building Mininet network")
   net, hosts = build_mn(host_data, switch_data, link_data, controller_data, pkt_data)
@@ -197,6 +273,12 @@ def main():
   if(args.build_only):
     print("[+] Dropping to Mininet CLI.")
     CLI(net)
+    if(args.generate_conf):
+      print("[+] Generating content for topo.conf file based on network build")
+      generate_topo_conf(net)
+  elif((args.build_only == False) and (args.generate_conf)):
+    print("[+] Generating content for topo.conf file based on network build")
+    generate_topo_conf(net)
   else:
     print("[+] Replaying pcap")
     do_pcap_replay(pkt_data)
