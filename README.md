@@ -57,9 +57,9 @@ This tool can take a configuration file that defines connections within the gene
 The following is an example config:
 ```json
 	{
-  		"hosts": {
-			"11:22:33:44:55:66": "h1",
-			"77:88:99:00:aa:bb": "h2"
+	"hosts": {
+		"11:22:33:44:55:66": "h1",
+		"77:88:99:00:aa:bb": "h2"
 	  	},
   	"switches": [
 		"s1",
