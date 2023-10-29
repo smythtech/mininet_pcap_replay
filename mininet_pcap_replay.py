@@ -28,9 +28,10 @@ def handle_args():
   parser.add_argument("-r", "--pcap", help="PCAP file to read.", required=True)
   parser.add_argument("-c", "--controller-ip", help="IP address of network controller to use.", required=True)
   parser.add_argument("-p", "--controller-port", help="Port number of network controller to use.", default=6653, type=int, required=False)
-  parser.add_argument("-l", "--load-config", help="Topology configuration file to load", required=False)
+  parser.add_argument("-l", "--load-config", help="Topology configuration file to load.", required=False)
   parser.add_argument("-b", "--build-only", help="Drop to Mininet CLI after network is built (No pcap replay).", required=False, action='store_true')
   parser.add_argument("-g", "--generate-conf", help="Generate a configuration after network build. Will be printed after exiting Mininet CLI if using build-only mode.", required=False, action='store_true')
+  parser.add_argument("-x", "--xterm", help="Start an xterm instance for all hosts.", required=False, action='store_true')
   parser.add_argument("-v", "--verbose", help="Show additional output.", required=False, action='store_true')
   parser.add_argument('--version', action='version', version='%(prog)s 1.3')
 
@@ -83,7 +84,7 @@ def load_pcap_data(pcap, topo_config):
 
   return host_data, pkt_data
 
-def build_mn(host_data, switch_data, link_data, controller_data, pkt_data):
+def build_mn(host_data, switch_data, link_data, controller_data, pkt_data, xterm):
   net = Mininet()
   switches = []
   hosts = []
@@ -151,6 +152,8 @@ def build_mn(host_data, switch_data, link_data, controller_data, pkt_data):
   print("\tMaking additional configurations")
   for host in hosts:
     # Prevent the network stack retransmitting segments
+    if(xterm):
+      host.cmd("xterm -fa 'Monospace' -fs 12 -xrm 'XTerm.vt100.allowTitleOps: false' -T '" + host.name + "' &")
     host.cmd("echo 0 > /proc/sys/net/ipv4/tcp_retries2")
     # Add iptables rules to drop all incoming traffic to avoid unexpected behaviour.
     # https://superuser.com/questions/427458/deny-all-incoming-connections-with-iptables
@@ -249,12 +252,12 @@ def main():
       print("\tNo links detected in config")
   host_data, pkt_data = load_pcap_data(pcap, topo_config)
   print("[+] Loaded data for " + str(len(host_data)) + " hosts.")
-  # Leaving the controller config out of the config file for now. 
+  # Leaving the controller config out of the config file for now.
   controller_data = {}
   controller_data["c0"] = (args.controller_ip, args.controller_port)
 
   print("[+] Building Mininet network")
-  net, hosts = build_mn(host_data, switch_data, link_data, controller_data, pkt_data)
+  net, hosts = build_mn(host_data, switch_data, link_data, controller_data, pkt_data, args.xterm)
 
   if(verbose):
     print("[*] Setting signal handler")
@@ -271,7 +274,13 @@ def main():
     generate_topo_conf(net)
   else:
     print("[+] Replaying pcap")
-    do_pcap_replay(pkt_data)
+    try:
+      do_pcap_replay(pkt_data)
+    except AssertionError as e:
+      print("[!] Got assertion error while replaying packet.")
+      net.stop()
+      cleanup()
+      exit(1)
     print("[+] Finished")
 
   print("[+] Stopping network and cleaning up...", end="")
