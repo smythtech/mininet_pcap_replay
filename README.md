@@ -33,21 +33,23 @@ An SDN controller will be required when using this tool. This was tested with ON
 
 ## Usage
 
-	usage: mininet_pcap_replay.py [-h] -r PCAP -c CONTROLLER_IP [-p CONTROLLER_PORT] [-l LOAD_CONFIG] [-b] [-g] [-v] [--version]
+	usage: mininet_pcap_replay.py [-h] -r PCAP -c CONTROLLER_IP [-p CONTROLLER_PORT] [-l LOAD_CONFIG] [-b] [-g] [-x] [-v] [--version]
 
 	Replay a pcap file with a Mininet network.
 
-	optional arguments:
+	options:
 	  -h, --help            show this help message and exit
 	  -r PCAP, --pcap PCAP  PCAP file to read.
 	  -c CONTROLLER_IP, --controller-ip CONTROLLER_IP
-	                        IP address of network controller to use.
+        	                IP address of network controller to use.
 	  -p CONTROLLER_PORT, --controller-port CONTROLLER_PORT
 	                        Port number of network controller to use.
 	  -l LOAD_CONFIG, --load-config LOAD_CONFIG
-	                        Topology configuration file to load
+        	                Topology configuration file to load.
 	  -b, --build-only      Drop to Mininet CLI after network is built (No pcap replay).
-	  -g, --generate-conf   Generate a configuration after network build. Will be printed after exiting Mininet CLI if using build-only mode.
+	  -g, --generate-conf   Generate a configuration after network build. Will be printed after exiting Mininet CLI if using build-only
+        	                mode.
+	  -x, --xterm           Start an xterm instance for all hosts.
 	  -v, --verbose         Show additional output.
 	  --version             show program's version number and exit
 
