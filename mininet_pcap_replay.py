@@ -58,7 +58,6 @@ def load_pcap_data(pcap, topo_config):
       if((len(ip) >= 0) and (ip.split(".")[0] not in ip_ignore_list)):
         if((len(topo_config) > 0) and (pkt.src in configured_hosts)):
           host_name = configured_hosts[pkt.src]
-          print("Host name from file (src)" + str(host_name))
         else:
           host_count+=1
           host_name = "h" + str(host_count)
@@ -71,7 +70,6 @@ def load_pcap_data(pcap, topo_config):
       if((len(ip) > 0) and (ip.split(".")[0] not in ip_ignore_list)):
         if((len(topo_config) > 0) and (pkt.dst in configured_hosts)):
           host_name = configured_hosts[pkt.dst]
-          print("Host name from file (dst)" + str(host_name))
         else:
           host_count+=1
           host_name = "h" + str(host_count)
@@ -121,12 +119,9 @@ def build_mn(host_data, switch_data, link_data, controller_data, pkt_data):
         host_link_map[link_ends[0]] = l.intf2.name
       linked.append(link_ends[0])
 
-    print(linked)
-
     # Add non-configured links. All hosts to first switch
     for host in hosts:
       if(host.name not in linked):
-        print("Linking " + str(host.name))
         l = net.addLink(host.name, switches[0])
         host_link_map[host.name] = l.intf2.name
         linked.append(host.name)
@@ -152,11 +147,6 @@ def build_mn(host_data, switch_data, link_data, controller_data, pkt_data):
   for i in range(0, len(hosts)):
     hosts[i].setMAC(host_adds[i][3], intf=host_adds[i][2])
     hosts[i].setIP(host_adds[i][1], intf=host_adds[i][2])
-
-  '''
-  print("\tTesting connections")
-  net.pingAll(timeout=1)
-  '''
 
   print("\tMaking additional configurations")
   for host in hosts:
